@@ -1,14 +1,17 @@
 """
-Step 2 — Compute cosine similarity and filter rivals by threshold.
+Step 2 — Compute cosine similarity and label rivals by threshold.
 
 Reads:
-  pairs.csv        — built by step1_embed.py
-  embeddings.pkl   — built by step1_embed.py
+  pairs.csv        — built by ind_embed.py
+  embeddings.pkl   — built by ind_embed.py
 
 Writes:
-  rival_similarity.csv — columns: ipo_stkcd, rival_stkcd, year, csrc3_code, similarity
+  rival_similarity.csv — columns: ipo_stkcd, rival_stkcd, year, csrc3_code,
+                          sim_scope, sim_main, sim_combined,
+                          selected_scope, selected_main, selected_combined
 
-Adjust THRESHOLD below and re-run this script freely — no API calls are made.
+All pairs are kept; the selected_* columns flag whether similarity >= THRESHOLD
+for each dimension. Adjust THRESHOLD and re-run freely — no API calls are made.
 """
 
 import pickle
@@ -18,15 +21,15 @@ import numpy as np
 import pandas as pd
 
 # ── Settings (the only thing you need to change between runs) ─────────────────
-THRESHOLD = 0.5   # keep pairs with cosine similarity >= this value
+THRESHOLD = 0.7   # keep pairs with cosine similarity >= this value
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 OUT_DIR = Path(__file__).parent
 
 PAIRS_CSV      = OUT_DIR / "pairs.csv"
 EMBEDDINGS_PKL = OUT_DIR / "embeddings.pkl"
-RESULT_CSV     = OUT_DIR / "rival_similarity.csv"
-
+RESULT_CSV     = OUT_DIR / f"rival_similarity_{THRESHOLD}.csv" 
+RESULT_CSV_WITH_CONTENT = OUT_DIR / f"rival_similarity_with_content_{THRESHOLD}.csv"
 # ── Load ───────────────────────────────────────────────────────────────────────
 print("Loading pairs …")
 pairs_df = pd.read_csv(PAIRS_CSV, dtype={"ipo_stkcd": str, "rival_stkcd": str})
@@ -36,7 +39,7 @@ print("Loading embeddings …")
 with open(EMBEDDINGS_PKL, "rb") as f:
     embeddings: dict[str, np.ndarray] = pickle.load(f)
 print(f"  {len(embeddings):,} cached embeddings")
-
+# print(embeddings.items())
 # ── Vectorised cosine similarity ──────────────────────────────────────────────
 def cosine_sim_matrix(vecs_a: np.ndarray, vecs_b: np.ndarray) -> np.ndarray:
     """Row-wise cosine similarity between two (N, D) arrays."""
@@ -50,47 +53,59 @@ def cosine_sim_matrix(vecs_a: np.ndarray, vecs_b: np.ndarray) -> np.ndarray:
 
 print("Computing similarities …")
 
-# Look up embeddings for every row
-MISSING = np.zeros(1)   # sentinel for missing embeddings
+# DIMENSIONS = ["scope", "main", "combined", "fn"]
+DIMENSIONS = ["scope", "main", "combined"]
+# For each dimension, compute row-wise cosine sim and add selected_* flag
+result = pairs_df.copy()
 
-ipo_vecs   = np.array([embeddings.get(t, None) is not None
-                        and embeddings[t] or None
-                        for t in pairs_df["ipo_scope"]], dtype=object)
-rival_vecs = np.array([embeddings.get(t, None) is not None
-                        and embeddings[t] or None
-                        for t in pairs_df["rival_scope"]], dtype=object)
+for dim in DIMENSIONS:
+    ipo_col   = f"ipo_{dim}"
+    rival_col = f"rival_{dim}"
 
-# Build boolean mask of rows where both embeddings exist
-has_emb = np.array(
-    [(embeddings.get(row["ipo_scope"]) is not None and
-      embeddings.get(row["rival_scope"]) is not None)
-     for _, row in pairs_df.iterrows()],
-    dtype=bool,
-)
+    has_emb = np.array(
+        [(embeddings.get(row[ipo_col]) is not None and
+          embeddings.get(row[rival_col]) is not None)
+         for _, row in result.iterrows()],
+        dtype=bool,
+    )
+    n_missing = (~has_emb).sum()
+    if n_missing:
+        print(f"  [{dim}] Warning: {n_missing:,} pairs have a missing embedding.")
 
-n_missing = (~has_emb).sum()
-if n_missing:
-    print(f"  Warning: {n_missing:,} pairs have a missing embedding and will be skipped.")
+    sims = np.full(len(result), np.nan)
+    if has_emb.any():
+        idx   = np.where(has_emb)[0]
+        texts = result.iloc[idx]
+        mat_ipo   = np.vstack([embeddings[t] for t in texts[ipo_col]])
+        mat_rival = np.vstack([embeddings[t] for t in texts[rival_col]])
+        sims[idx] = cosine_sim_matrix(mat_ipo, mat_rival)
 
-valid_pairs = pairs_df[has_emb].copy()
+    result[f"sim_{dim}"]      = sims
+    result[f"selected_{dim}"] = (sims >= THRESHOLD)
 
-# Stack into matrices for fast batch computation
-mat_ipo   = np.vstack([embeddings[t] for t in valid_pairs["ipo_scope"]])
-mat_rival = np.vstack([embeddings[t] for t in valid_pairs["rival_scope"]])
-
-sims = cosine_sim_matrix(mat_ipo, mat_rival)
-valid_pairs["similarity"] = sims
-
-# ── Apply threshold ───────────────────────────────────────────────────────────
-result = valid_pairs[valid_pairs["similarity"] >= THRESHOLD].copy()
-result = result[["ipo_stkcd", "rival_stkcd", "year", "csrc3_code", "similarity"]]
-result = result.sort_values(["ipo_stkcd", "year", "similarity"], ascending=[True, True, False])
+result = result.sort_values(["ipo_stkcd", "year"], ascending=True)
 
 print(f"\nThreshold = {THRESHOLD}")
-print(f"  Pairs before filter : {len(valid_pairs):,}")
-print(f"  Pairs after filter  : {len(result):,}")
-print(f"  Retention rate      : {len(result) / max(len(valid_pairs), 1):.1%}")
+for dim in DIMENSIONS:
+    n_sel = result[f"selected_{dim}"].sum()
+    n_val = result[f"sim_{dim}"].notna().sum()
+    print(f"  [{dim:8s}]  valid: {n_val:,}  selected: {n_sel:,}  ({n_sel / max(n_val, 1):.1%})")
 
 # ── Save ──────────────────────────────────────────────────────────────────────
-result.to_csv(RESULT_CSV, index=False, encoding="utf-8-sig", float_format="%.6f")
+out_cols = (
+    ["ipo_stkcd", "rival_stkcd", "year", "csrc3_code"] +
+    [f"sim_{d}" for d in DIMENSIONS] +
+    [f"selected_{d}" for d in DIMENSIONS]
+)
+result[out_cols].to_csv(RESULT_CSV, index=False, encoding="utf-8-sig", float_format="%.6f")
 print(f"\nSaved → {RESULT_CSV.name}")
+
+out_cols_with_content = (
+    ["ipo_stkcd", "rival_stkcd", "year", "csrc3_code"] +
+    [f"ipo_{d}" for d in DIMENSIONS] +
+    [f"rival_{d}" for d in DIMENSIONS] +
+    [f"sim_{d}" for d in DIMENSIONS] +
+    [f"selected_{d}" for d in DIMENSIONS]
+)
+result[out_cols_with_content].to_csv(RESULT_CSV_WITH_CONTENT, index=False, encoding="utf-8-sig", float_format="%.6f")
+print(f"Saved → {RESULT_CSV_WITH_CONTENT.name}")
