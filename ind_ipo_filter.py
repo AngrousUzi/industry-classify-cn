@@ -14,6 +14,7 @@ All pairs are kept; the selected_* columns flag whether similarity >= THRESHOLD
 for each dimension. Adjust THRESHOLD and re-run freely — no API calls are made.
 """
 
+import os
 import pickle
 from pathlib import Path
 
@@ -21,11 +22,13 @@ import numpy as np
 import pandas as pd
 
 # ── Settings (the only thing you need to change between runs) ─────────────────
-THRESHOLD = 0.7   # keep pairs with cosine similarity >= this value
+THRESHOLD = 0.7968   # keep pairs with cosine similarity >= this value
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-OUT_DIR = Path(__file__).parent
-
+if os.name == "nt":
+    OUT_DIR = Path(__file__).parent
+else:
+    OUT_DIR = Path("./")
 PAIRS_CSV      = OUT_DIR / "ind_pairs.csv"
 EMBEDDINGS_PKL = OUT_DIR / "ind_embeddings.pkl"
 RESULT_CSV     = OUT_DIR / f"ind_rival_similarity_{THRESHOLD}.csv" 
