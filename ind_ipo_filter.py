@@ -30,6 +30,7 @@ PAIRS_CSV      = OUT_DIR / "ind_pairs.csv"
 EMBEDDINGS_PKL = OUT_DIR / "ind_embeddings.pkl"
 RESULT_CSV     = OUT_DIR / f"ind_rival_similarity_{THRESHOLD}.csv" 
 RESULT_CSV_WITH_CONTENT = OUT_DIR / f"ind_rival_similarity_with_content_{THRESHOLD}.csv"
+RETENTION_BY_INDUSTRY_CSV = OUT_DIR / f"ind_rival_retention_by_csrc3_{THRESHOLD}.csv"
 # ── Load ───────────────────────────────────────────────────────────────────────
 print("Loading pairs …")
 pairs_df = pd.read_csv(PAIRS_CSV, dtype={"ipo_stkcd": str, "rival_stkcd": str})
@@ -90,6 +91,42 @@ for dim in DIMENSIONS:
     n_sel = result[f"selected_{dim}"].sum()
     n_val = result[f"sim_{dim}"].notna().sum()
     print(f"  [{dim:8s}]  valid: {n_val:,}  selected: {n_sel:,}  ({n_sel / max(n_val, 1):.1%})")
+
+# ── Retention by industry (csrc3_code) ──────────────────────────────────────
+retention_rows = []
+for csrc3_code, grp in result.groupby("csrc3_code", dropna=False):
+    row = {"csrc3_code": csrc3_code}
+    for dim in DIMENSIONS:
+        n_val = int(grp[f"sim_{dim}"].notna().sum())
+        n_sel = int(grp[f"selected_{dim}"].sum())
+        row[f"valid_{dim}"] = n_val
+        row[f"selected_{dim}"] = n_sel
+        row[f"retention_{dim}"] = (n_sel / n_val) if n_val > 0 else np.nan
+    retention_rows.append(row)
+
+retention_df = pd.DataFrame(retention_rows)
+retention_df = retention_df.sort_values("csrc3_code", ascending=True)
+
+print("\nRetention by csrc3_code (top 20 by valid_combined):")
+preview_cols = [
+    "csrc3_code",
+    "valid_scope", "selected_scope", "retention_scope",
+    "valid_main", "selected_main", "retention_main",
+    "valid_combined", "selected_combined", "retention_combined",
+]
+print(
+    retention_df.sort_values("valid_combined", ascending=False)
+    .head(20)[preview_cols]
+    .to_string(index=False)
+)
+
+retention_df.to_csv(
+    RETENTION_BY_INDUSTRY_CSV,
+    index=False,
+    encoding="utf-8-sig",
+    float_format="%.6f",
+)
+print(f"Saved → {RETENTION_BY_INDUSTRY_CSV.name}")
 
 # ── Save ──────────────────────────────────────────────────────────────────────
 out_cols = (

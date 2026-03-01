@@ -81,7 +81,8 @@ ipo["ListYear"] = ipo["Listdt"].astype(str).str[:4].apply(
 # (CSRC 2001 pre-2012, CSRC 2012 for 2012-2022, association code 2023+).
 # Taking the first 3 characters gives the sub-sector level used in the paper.
 # For 2023+ IPO firms you may want to use IndustryCodeC instead — see note below.
-anl["csrc3"] = anl["IndustryCode"].astype(str)
+# 统一使用中上协行业分类
+anl["csrc3"] = anl["IndustryCodeD"].astype(str)
 
 # Restrict ANL/FN to IPO listing years only (speeds up the pair-building loop)
 valid_years = set(ipo["ListYear"].dropna().astype(int))
