@@ -2,8 +2,8 @@
 Step 1 — Build membership pairs and compute embeddings.
 
 Outputs (both saved to the same directory as this script):
-  pairs.csv        — all (IPO firm, rival) pairs with their business descriptions
-  embeddings.pkl   — dict mapping business-scope text → np.ndarray embedding vector
+  ind_pairs.csv        — all (IPO firm, rival) pairs with their business descriptions
+  ind_embeddings.pkl   — dict mapping business-scope text → np.ndarray embedding vector
 
 Run this script once (or re-run to extend the cache with new data).
 Step 2 (ind_filter.py) reads these outputs and applies the similarity threshold.
@@ -42,8 +42,8 @@ ANL_FILE = INFO_DIR / "STK_LISTEDCOINFOANL.xlsx"
 IPO_FILE = ANN_DIR / "IPO_roadshow_index.xlsx"
 FN_FILE  = INFO_DIR / "FN_Fn001.xlsx"
 
-PAIRS_CSV      = OUT_DIR / "pairs.csv"
-EMBEDDINGS_PKL = OUT_DIR / "embeddings.pkl"
+PAIRS_CSV      = OUT_DIR / "ind_pairs.csv"
+EMBEDDINGS_PKL = OUT_DIR / "ind_embeddings.pkl"
 
 # ── Load data ────────────────────────────────────────────────────────────────
 print("Loading STK_LISTEDCOINFOANL.xlsx …")
@@ -96,7 +96,7 @@ pairs_list = []
 for idx, ipo_row in ipo.iterrows():
     if (idx+1) % 100 == 0:
         print(f"  Processing IPO {idx+1:,} / {len(ipo):,} …")
-        break  # TEMP: limit to first 100 IPOs for testing
+    #     break  # TEMP: limit to first 100 IPOs for testing
     stkcd = ipo_row["Stkcd"]
     year  = ipo_row["ListYear"]
 

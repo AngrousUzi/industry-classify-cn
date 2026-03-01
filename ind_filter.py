@@ -2,11 +2,11 @@
 Step 2 — Compute cosine similarity and label rivals by threshold.
 
 Reads:
-  pairs.csv        — built by ind_embed.py
-  embeddings.pkl   — built by ind_embed.py
+  ind_pairs.csv        — built by ind_embed.py
+  ind_embeddings.pkl   — built by ind_embed.py
 
 Writes:
-  rival_similarity.csv — columns: ipo_stkcd, rival_stkcd, year, csrc3_code,
+  ind_rival_similarity.csv — columns: ipo_stkcd, rival_stkcd, year, csrc3_code,
                           sim_scope, sim_main, sim_combined,
                           selected_scope, selected_main, selected_combined
 
@@ -26,10 +26,10 @@ THRESHOLD = 0.7   # keep pairs with cosine similarity >= this value
 # ── Paths ─────────────────────────────────────────────────────────────────────
 OUT_DIR = Path(__file__).parent
 
-PAIRS_CSV      = OUT_DIR / "pairs.csv"
-EMBEDDINGS_PKL = OUT_DIR / "embeddings.pkl"
-RESULT_CSV     = OUT_DIR / f"rival_similarity_{THRESHOLD}.csv" 
-RESULT_CSV_WITH_CONTENT = OUT_DIR / f"rival_similarity_with_content_{THRESHOLD}.csv"
+PAIRS_CSV      = OUT_DIR / "ind_pairs.csv"
+EMBEDDINGS_PKL = OUT_DIR / "ind_embeddings.pkl"
+RESULT_CSV     = OUT_DIR / f"ind_rival_similarity_{THRESHOLD}.csv" 
+RESULT_CSV_WITH_CONTENT = OUT_DIR / f"ind_rival_similarity_with_content_{THRESHOLD}.csv"
 # ── Load ───────────────────────────────────────────────────────────────────────
 print("Loading pairs …")
 pairs_df = pd.read_csv(PAIRS_CSV, dtype={"ipo_stkcd": str, "rival_stkcd": str})
