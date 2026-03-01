@@ -49,6 +49,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import os
+
 # ── Settings ──────────────────────────────────────────────────────────────────
 DIMENSIONS = ["scope", "main", "combined"]
 
@@ -62,8 +64,10 @@ TARGET_CSRC_RATE = 0.0289  # 2.89% as stated in the paper
 SAVE_PAIRS_WITHIN = True
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-OUT_DIR = Path(__file__).parent
-
+if os.name == "nt":
+    OUT_DIR = Path(__file__).parent
+else:
+    OUT_DIR = Path("./")
 INFO_CSV       = OUT_DIR / "ind_all_info.csv"
 EMBEDDINGS_PKL = OUT_DIR / "ind_all_embeddings.pkl"
 
