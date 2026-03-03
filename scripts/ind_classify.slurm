@@ -14,12 +14,14 @@ cd /dssg/home/acct-nanli/xxxxxxyz/IPO/
 
 type=$1
 range=$2
-if [ "$type" == "embed" ]; then
+if [ "$type" == "pair" ]; then
+    echo "Running pairing scripts..."
+elif [ "$type" == "embed" ]; then
     echo "Running embedding script..."
 elif [ "$type" == "filter" ]; then
     echo "Running filtering script..."
 else
-    echo "Invalid argument: $type. Please use 'embed' or 'filter'."
+    echo "Invalid argument: $type. Please use 'pair', 'embed' or 'filter'."
     exit 1
 fi
 if [ "$range" == "all" ]; then
@@ -29,6 +31,7 @@ if [ "$range" == "all" ]; then
 elif [ "$range" == "ipo" ]; then
     echo "Processing ipo data..."
     python -u  "industry-classify-cn/ind_${range}_${type}.py"
+    # python -u "industry-classify-cn/ind_ipo_filter.py"
 else
     echo "Invalid argument: $range. Please use 'all' or 'ipo'."
     exit 1

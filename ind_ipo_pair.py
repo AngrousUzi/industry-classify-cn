@@ -26,7 +26,7 @@ else:
     ANN_DIR = Path("./")
 
 ANL_FILE = INFO_DIR / "STK_LISTEDCOINFOANL.xlsx"
-IPO_FILE = ANN_DIR / "IPO_roadshow_index_2009.xlsx"
+IPO_FILE = ANN_DIR / "IPO_index.xlsx"
 FN_FILE  = INFO_DIR / "FN_Fn001.xlsx"
 
 PAIRS_CSV = OUT_DIR / "ind_pairs.csv"
