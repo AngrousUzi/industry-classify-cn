@@ -64,7 +64,7 @@ ipo["ListYear"] = ipo["Listdt"].astype(str).str[:4].apply(
 )
 # Select only the firms in SHanghai and Shenzhen stock exchanges (exclude NYSE, HKEX, etc.)
 if SZSH_ONLY:
-    ipo=ipo[ipo["Symbol"].str.startswith(["0", "3", "6"])].copy()
+    anl=anl[anl["Symbol"].str.startswith(("0", "3", "6"))].copy()
 
 # ── 3-digit CSRC code ─────────────────────────────────────────────────────────
 # IndustryCode in ANL already encodes the appropriate CSRC version per year
