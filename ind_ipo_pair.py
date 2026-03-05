@@ -33,6 +33,7 @@ PAIRS_CSV = OUT_DIR / "ind_pairs.csv"
 
 IDNEX_COL = "INDEX2009"  # column in IPO_roadshow_index_2009.xlsx that uniquely identifies each IPO firm (used for debugging)
 
+SZSH_ONLY= True  # whether to restrict to Shanghai and Shenzhen stock exchanges (exclude NYSE, HKEX, etc.)
 
 def clean_text(s) -> str:
     """Remove newlines and spaces from raw field text."""
@@ -61,6 +62,9 @@ anl["Year"] = pd.to_datetime(anl["EndDate"], errors="coerce").dt.year
 ipo["ListYear"] = ipo["Listdt"].astype(str).str[:4].apply(
     lambda s: int(s) if s.isdigit() else np.nan
 )
+# Select only the firms in SHanghai and Shenzhen stock exchanges (exclude NYSE, HKEX, etc.)
+if SZSH_ONLY:
+    anl=anl[anl["Symbol"].str.startswith(("0", "3", "6"))].copy()
 
 # ── 3-digit CSRC code ─────────────────────────────────────────────────────────
 # IndustryCode in ANL already encodes the appropriate CSRC version per year
